@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graphing Calculator with Fixed Y-axis Scaling</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(to bottom right, #74ebd5, #acb6e5);
+    }
+    .calculator {
+      width: 300px;
+      padding: 20px;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+    }
+    .display {
+      width: 100%;
+      height: 60px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 5px;
+      text-align: right;
+      font-size: 1.5rem;
+      padding: 10px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    button {
+      height: 50px;
+      font-size: 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .graph-container {
+      width: 500px;
+      height: 300px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+    .input-section {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .input-section label {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .input-section input {
+      margin-right: 5px;
+      width: 70px;
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Calculator Section -->
+  <div class="calculator">
+    <input type="text" id="display" class="display" disabled />
+    <div class="buttons">
+      <button class="clear" onclick="clearDisplay()">C</button>
+      <button onclick="input('7')">7</button>
+      <button onclick="input('8')">8</button>
+      <button onclick="input('9')">9</button>
+      <button class="operator" onclick="input('/')">÷</button>
+      <button onclick="input('4')">4</button>
+      <button onclick="input('5')">5</button>
+      <button onclick="input('6')">6</button>
+      <button class="operator" onclick="input('*')">×</button>
+      <button onclick="input('1')">1</button>
+      <button onclick="input('2')">2</button>
+      <button onclick="input('3')">3</button>
+      <button class="operator" onclick="input('-')">−</button>
+      <button onclick="input('0')">0</button>
+      <button onclick="input('.')">.</button>
+      <button onclick="calculate()">=</button>
+      <button class="operator" onclick="input('+')">+</button>
+    </div>
+  </div>
+
+  <!-- Equation Input Section -->
+  <div class="input-section">
+    <label for="equation">Equation:</label>
+    <input type="text" id="equation" placeholder="y = ..." />
+  </div>
+
+  <!-- Scale Input Section -->
+  <div class="input-section">
+    <label for="x-min">X-min:</label>
+    <input type="number" id="x-min" value="-10" />
+    <label for="x-max">X-max:</label>
+    <input type="number" id="x-max" value="10" />
+    <label for="y-min">Y-min:</label>
+    <input type="number" id="y-min" value="-10" />
+    <label for="y-max">Y-max:</label>
+    <input type="number" id="y-max" value="10" />
+    <button onclick="plotGraph()">Graph</button>
+  </div>
+
+  <!-- Graph Container Section -->
+  <div class="graph-container">
+    <canvas id="graphCanvas" width="500" height="300"></canvas>
+  </div>
+
+  <script>
+    let currentInput = '';
+
+    function input(value) {
+      currentInput += value;
+      updateDisplay();
+    }
+
+    function clearDisplay() {
+      currentInput = '';
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      document.getElementById('display').value = currentInput || '0';
+    }
+
+    function calculate() {
+      try {
+        currentInput = eval(currentInput).toString();
+        updateDisplay();
+      } catch {
+        alert('Invalid Expression');
+        clearDisplay();
+      }
+    }
+
+    function plotGraph() {
+      const inputEquation = document.getElementById('equation').value.trim();
+      const xMin = parseFloat(document.getElementById('x-min').value);
+      const xMax = parseFloat(document.getElementById('x-max').value);
+      const yMin = parseFloat(document.getElementById('y-min').value);
+      const yMax = parseFloat(document.getElementById('y-max').value);
+
+      const linearMatch = inputEquation.match(/^y\s*=\s*([\d.-]+)x\s*([\+\-]\s*[\d.-]+)?$/i);
+      const exponentialMatch = inputEquation.match(/^y\s*=\s*([\d.-]+)\s*\*\s*([\d.-]+)\^x$/i);
+      const expFunctionMatch = inputEquation.match(/^y\s*=\s*([\d.-]+)\s*\*\s*e\^\(([\d.-]+)x\)$/i);
+
+      if (linearMatch) {
+        const m = parseFloat(linearMatch[1]);
+        const b = parseFloat(linearMatch[2]?.replace(/\s+/g, '') || 0);
+        drawGraph((x) => m * x + b, xMin, xMax, yMin, yMax);
+      } else if (exponentialMatch) {
+        const a = parseFloat(exponentialMatch[1]);
+        const base = parseFloat(exponentialMatch[2]);
+        drawGraph((x) => a * Math.pow(base, x), xMin, xMax, yMin, yMax);
+      } else if (expFunctionMatch) {
+        const a = parseFloat(expFunctionMatch[1]);
+        const b = parseFloat(expFunctionMatch[2]);
+        drawGraph((x) => a * Math.exp(b * x), xMin, xMax, yMin, yMax);
+      } else {
+        alert('Please enter a valid equation');
+      }
+    }
+
+    function drawGraph(equation, xMin, xMax, yMin, yMax) {
+      const canvas = document.getElementById('graphCanvas');
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Scale factors
+      const xScale = width / (xMax - xMin);
+      const yScale = height / (yMax - yMin);
+
+      // Calculate the center of the graph for (0, 0)
+      const centerX = (0 - xMin) * xScale;
+      const centerY = height - (0 - yMin) * yScale;
+
+      // Draw axes
+      ctx.strokeStyle = '#000';
+      ctx.beginPath();
+      ctx.moveTo(0, centerY); // X-axis
+      ctx.lineTo(width, centerY);
+      ctx.moveTo(centerX, 0); // Y-axis
+      ctx.lineTo(centerX, height);
+      ctx.stroke();
+
+      ctx.font = '10px Arial';
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Draw X-axis markings
+      for (let x = Math.ceil(xMin); x <= Math.floor(xMax); x++) {
+        const canvasX = (x - xMin) * xScale;
+        ctx.beginPath();
+        ctx.moveTo(canvasX, centerY - 5);
+        ctx.lineTo(canvasX, centerY + 5);
+        ctx.stroke();
+        if (x !== 0) ctx.fillText(x, canvasX, centerY + 15);
+      }
+
+      // Draw Y-axis markings
+      for (let y = Math.ceil(yMin); y <= Math.floor(yMax); y++) {
+        const canvasY = centerY - (y - yMin) * yScale;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 5, canvasY);
+        ctx.lineTo(centerX + 5, canvasY);
+        ctx.stroke();
+        if (y !== 0) ctx.fillText(y, centerX - 15, canvasY);
+      }
+
+      // Plot the equation
+      ctx.strokeStyle = '#007bff';
+      ctx.beginPath();
+
+      for (let canvasX = 0; canvasX <= width; canvasX++) {
+        const x = (canvasX / xScale) + xMin;
+        const y = equation(x);
+        const canvasY = centerY - (y - yMin) * yScale;
+
+        if (canvasX === 0) {
+          ctx.moveTo(canvasX, canvasY);
+        } else {
+          ctx.lineTo(canvasX, canvasY);
+        }
+      }
+
+      ctx.stroke();
+    }
+  </script>
+</body>
+</html>
